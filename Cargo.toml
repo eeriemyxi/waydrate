@@ -9,6 +9,7 @@ authors = ["eeriemyxi myxi@duck.com"]
 description = "Hydration intake logs in Rust."
 license = "MIT"
 repository = "https://github.com/eeriemyxi/waydrate"
+readme = "README.md"
 
 [workspace.dependencies]
 waydrate-core = { path = "crates/waydrate-core", version = "0.1.2" }
