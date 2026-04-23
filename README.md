@@ -14,6 +14,10 @@ Prebuilt packages for Linux, Windows, and MacOS are available in [GitHub Release
 
 If you have Rust installed, you can also install it via:
 ```console
+cargo install waydrate
+```
+Or,
+```console
 cargo install --git https://github.com/eeriemyxi/waydrate/ --bin waydrate
 ```
 
