@@ -1,0 +1,17 @@
+[package]
+name = "waydrate"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+waydrate-core = {path = "../waydrate-core"}
+sea-orm = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+platform-dirs = { workspace = true }
+once_cell = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+notify = { workspace = true }
