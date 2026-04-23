@@ -2,9 +2,12 @@
 name = "waydrate"
 version.workspace = true
 edition.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
-waydrate-core = {path = "../waydrate-core"}
+waydrate-core = { workspace = true }
 sea-orm = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }

@@ -6,8 +6,12 @@ resolver = "3"
 version = "0.1.1"
 edition = "2024"
 authors = ["eeriemyxi myxi@duck.com"]
+description = "Hydration intake logs in Rust."
+license = "MIT"
+repository = "https://github.com/eeriemyxi/waydrate"
 
 [workspace.dependencies]
+waydrate-core = { path = "crates/waydrate-core", version = "0.1.1" }
 sea-orm = { version = "2.0.0-rc", features = [ 
     "sqlx-sqlite", 
     "runtime-tokio-native-tls", 
