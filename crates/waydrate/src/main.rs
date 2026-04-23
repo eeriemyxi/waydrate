@@ -277,6 +277,9 @@ impl CommandHandler {
                         println!("Created directory: {dir:?}", dir = &config_dir);
                     }
                 }
+
+                let _ = utils::get_connection(&self.db_url()?).await?;
+                println!("Successfully initialized the database");
             }
             MainCommand::Set { command } => match command {
                 SetCommand::Goal { ml } => {
