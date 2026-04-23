@@ -10,7 +10,14 @@ Based on your cup's volume, it displays how many cups you need for the day. This
 ![](assets/demo-i.png)
 
 ## Installation
-[To be written.]
+Prebuilt packages for Linux, Windows, and MacOS are available in [GitHub Releases](https://github.com/eeriemyxi/waydrate/releases/latest).
+
+If you have Rust installed, you can also install it via:
+```console
+cargo install --git https://github.com/eeriemyxi/waydrate/ --bin waydrate
+```
+
+Please run `waydrate setup` to initialize Waydrate after you install it.
 
 ## Waybar (and similar integration)
 The binary has this command, `waydrate display watch`, which can be used to
