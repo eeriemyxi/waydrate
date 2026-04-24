@@ -5,6 +5,7 @@ mod utils;
 use std::fs::create_dir;
 
 use anyhow::{Context, Result, anyhow};
+use chrono::Local;
 use clap::{Parser, Subcommand};
 use sea_orm::DatabaseConnection;
 use utils::{get_config_dir, get_db_file};
@@ -177,7 +178,7 @@ impl CommandHandler {
                     let mut buf = String::new();
                     buf.push_str(&format!(
                         "┌ {}\n",
-                        rec.date_logged.format("%d/%m/%y - %I:%M %p")
+                        rec.date_logged.with_timezone(&Local).format("%d/%m/%y - %I:%M %p")
                     ));
                     buf.push_str(&format!(
                         "└ 󰖌 {} ml | id: {} | r-id: {}\n",
