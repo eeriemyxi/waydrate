@@ -5,12 +5,14 @@ Waydrate is designed to be simple in concept. It only needs two core pieces of i
 1. The volume of your cup in milliliters (ml).
 2. Your daily goal in milliliters (ml).
 
-Based on your cup's volume, it displays how many cups you need for the day. This is deliberately all.
+Based on your cup's volume, it displays how many cups you need for the day. This
+is deliberately all.
 ## Screenshots
 ![](assets/demo-i.png)
 
 ## Installation
-Prebuilt packages for Linux, Windows, and MacOS are available in [GitHub Releases](https://github.com/eeriemyxi/waydrate/releases/latest).
+Prebuilt packages for Linux, Windows, and MacOS are available from the [GitHub
+Releases](https://github.com/eeriemyxi/waydrate/releases/latest).
 
 If you have Rust installed, you can also install it via:
 ```console
@@ -25,7 +27,8 @@ Please run `waydrate setup` to initialize Waydrate after you install it.
 
 ## Waybar (and similar integration)
 The binary has this command, `waydrate display watch`, which can be used to
-integrate this program as a convenient module for your waybar (or something equivalent with support for listening for changes to stdout.)
+integrate this program as a convenient module for your waybar (or something
+equivalent with support for listening for changes to stdout.)
 
 ```json
 "custom/hydration": {
@@ -39,9 +42,12 @@ integrate this program as a convenient module for your waybar (or something equi
 
 ## Keyboard Shortcuts
 This binary doesn't have the concept of keyboard shortcuts, but it is easy to
-integrate it with your window manager. This is because the database is stored in a persistent place, so you don't have to deal with anything other than putting the program onto your `$PATH`.
+integrate it with your window manager. This is because the database is stored in
+a persistent place, so you don't have to deal with anything other than putting
+the program onto your `$PATH`.
 
-To record you had a cup, simply run `waydrate record cup`. You can even give it a count, `waydrate record cup 3`.
+To record you had a cup, simply run `waydrate record cup`. You can also give it
+a count, `waydrate record cup 3`.
 
 There is also `waydrate record remove last` which is solely there to help you
 set it up with a keyboard shortcut and revert your last mistake in the logs (when
@@ -57,7 +63,9 @@ Mod+Ctrl+bracketLeft {spawn "waydrate" "record" "remove" "last";}
 With `waydrate daily`, you can see your progress for the day.
 
 ## Removing Logs
-`waydrate record remove` supports two modes, relative IDs and absolute IDs. By default, it expects relative IDs (`r-id` in `daily` command). You can use `-r` flag of `remove` to use absolute IDs instead.
+`waydrate record remove` supports two modes, relative IDs and absolute IDs. By
+default, it expects relative IDs (`r-id` in `daily` command). You can use `-r`
+flag of `remove` to use absolute IDs instead. It supports giving multiple IDs.
 
 Relative IDs start from 0 per day.
 
