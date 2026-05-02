@@ -67,6 +67,10 @@ With `waydrate logs daily`, you can see your progress for the day.
 - `2d`
 - `1w`.
 
+## Overview Logs
+You can see overview logs with `waydrate logs overview` which also supports
+`number<d|w|y|m>` format. E.g., `... overview 1w`.
+
 ## Removing Logs
 `waydrate record remove` supports two modes, relative IDs and absolute IDs. By
 default, it expects relative IDs (`r-id` in `daily` command). You can use `-r`

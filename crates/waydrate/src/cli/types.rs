@@ -11,7 +11,7 @@ pub(crate) struct Cli {
 }
 #[derive(Subcommand)]
 pub(crate) enum MainCommand {
-    /// Get logs for a day. Supports `daily` and number<d|w|m|y> (e.g., 2d -> 2 days ago)
+    /// See logs. Supports `daily` and number<d|w|m|y> (e.g., 2d -> 2 days ago)
     Logs {
         #[command(subcommand)]
         command: Option<LogsCommand>,
@@ -88,6 +88,11 @@ pub(crate) enum SetCommand {
 pub(crate) enum LogsCommand {
     /// Daily intake log
     Daily,
+    /// Overview for a time period. Supports number<d|w|m|y> (e.g., 1w)
+    Overview {
+        #[arg(default_value = "1w")]
+        period: String,
+    },
     #[command(external_subcommand)]
     External(Vec<String>),
 }

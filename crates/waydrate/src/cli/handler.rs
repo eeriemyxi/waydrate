@@ -5,9 +5,9 @@ use crate::cli::types::{Cli, DisplayCommand, MainCommand, RecordCommand, SetComm
 use crate::styles;
 use crate::utils::{self, get_config_dir, get_db_file};
 use anyhow::{Context, Result, anyhow};
-use chrono::{Duration, Local, Months, NaiveDateTime};
+use chrono::{Datelike, Local, NaiveDateTime};
 use sea_orm::DatabaseConnection;
-use waydrate_core::{self as waycore, entity::config};
+use waydrate_core::{self as waycore, entity::config, entity::record};
 
 use super::types::LogsCommand;
 
@@ -113,23 +113,36 @@ impl CommandHandler {
         Ok(buf)
     }
 
-    fn show_records(&self, for_day: NaiveDateTime, records: &[waycore::entity::record::Model]) {
+    fn show_records(
+        &self,
+        for_day: NaiveDateTime,
+        records: &[waycore::entity::record::Model],
+        include_time: bool,
+        indent_level: usize,
+    ) {
         eprintln!(
             "{style}INFO:{style:#} showing logs for {}",
-            for_day.format("%m/%d/%Y %I:%M:%S %p"),
+            for_day.format(&format!(
+                "%m/%d/%Y {time_fmt}",
+                time_fmt = if include_time { "%I:%M:%S %p" } else { "" }
+            )),
             style = styles::bold_green()
         );
         for (rel_id, rec) in records.iter().enumerate() {
             let mut buf = String::new();
             let date = rec.date_logged.with_timezone(&Local);
             buf.push_str(&format!(
-                "┌ {} ({})\n",
+                "{}┌ {} ({})\n",
+                " ".repeat(indent_level),
                 date.format("%d/%m/%y - %I:%M %p"),
                 chrono_humanize::HumanTime::from(date)
             ));
             buf.push_str(&format!(
-                "└ 󰖌 {} ml | id: {} | r-id: {}\n",
-                rec.amount_ml, rec.id, rel_id
+                "{}└ 󰖌 {} ml | id: {} | r-id: {}\n",
+                " ".repeat(indent_level),
+                rec.amount_ml,
+                rec.id,
+                rel_id
             ));
             println!("{}", &buf)
         }
@@ -141,31 +154,56 @@ impl CommandHandler {
                 Some(LogsCommand::Daily) | None => {
                     let conn = utils::get_connection(&self.db_url()?).await?;
                     let records = waycore::get_daily_records(&conn).await?;
-                    self.show_records(Local::now().naive_local(), &records);
+                    self.show_records(Local::now().naive_local(), &records, true, 0);
+                }
+                Some(LogsCommand::Overview { period }) => {
+                    let (offset, period) = utils::parse_period(period)?;
+                    let (start_utc, end_utc) = utils::period_to_datetime(offset, period, false)?;
+
+                    let conn = utils::get_connection(&self.db_url()?).await?;
+                    let records = waycore::get_records_for_date(&conn, start_utc, end_utc).await?;
+
+                    let structured_recs = records.into_iter().try_fold(
+                        Vec::<Vec<record::Model>>::new(),
+                        |mut acc, m| {
+                            if acc.is_empty() {
+                                acc.push(vec![m]);
+                            } else if let Some(last) = acc.last_mut() {
+                                if last
+                                    .last()
+                                    .context("failed to get last item of last chunk")?
+                                    .date_logged
+                                    .ordinal()
+                                    == m.date_logged.ordinal()
+                                {
+                                    last.push(m);
+                                } else {
+                                    acc.push(vec![m]);
+                                }
+                            }
+                            anyhow::Ok(acc)
+                        },
+                    )?;
+
+                    for day_log in structured_recs {
+                        self.show_records(
+                            day_log
+                                .first()
+                                .context("failed to get first model")?
+                                .date_logged
+                                .naive_local(),
+                            &day_log,
+                            false,
+                            4,
+                        );
+                    }
                 }
                 Some(LogsCommand::External(args)) => {
                     if args.len() > 1 {
                         return Err(anyhow!("Too many args. Must be 1 at most.",));
                     }
 
-                    let input = args.first().map_or("0d", |v| v).chars();
-                    let mut offset = String::new();
-                    let mut period = 'd';
-                    for c in input.clone() {
-                        if c.is_numeric() {
-                            offset.push(c);
-                        } else if matches!(c, 'd' | 'w' | 'm' | 'y') {
-                            period = c;
-                        } else {
-                            return Err(anyhow!(
-                                "Unexpected char {:?} in {:?}",
-                                &c,
-                                &input.as_str()
-                            ));
-                        }
-                    }
-                    let offset = offset.parse::<i64>()?;
-
+                    let (offset, period) = utils::parse_period(args.first().map_or("0d", |v| v))?;
                     if offset != 0 {
                         eprintln!(
                             "{style}WARNING:{style:#} r-id only works for the ongoing day (use absolute ids instead)",
@@ -173,53 +211,12 @@ impl CommandHandler {
                         )
                     }
 
-                    use chrono::{Local, Utc};
-
-                    let today_local = Local::now().date_naive();
-
-                    let mut day_start_local = today_local
-                        .and_hms_opt(0, 0, 0)
-                        .context("Invalid time parameters provided")?
-                        .and_local_timezone(Local)
-                        .latest()
-                        .context("Invalid time parameters provided")?;
-
-                    let mut day_end_local = today_local
-                        .and_hms_opt(23, 59, 59)
-                        .context("Invalid time parameters provided")?
-                        .and_local_timezone(Local)
-                        .latest()
-                        .context("Invalid time parameters provided")?;
-
-                    match period {
-                        'd' => {
-                            day_start_local -= Duration::days(offset);
-                            day_end_local -= Duration::days(offset);
-                        }
-                        'w' => {
-                            day_start_local -= Duration::weeks(offset);
-                            day_end_local -= Duration::weeks(offset);
-                        }
-                        period @ ('m' | 'y') => {
-                            let offset =
-                                u32::try_from(offset)? * (if period == 'y' { 12 } else { 1 });
-                            day_start_local = day_start_local
-                                .checked_sub_months(Months::new(offset))
-                                .context("Couldn't convert date")?;
-                            day_end_local = day_end_local
-                                .checked_sub_months(Months::new(offset))
-                                .context("Couldn't convert date")?;
-                        }
-                        _ => unreachable!(),
-                    }
-
-                    let start_utc = day_start_local.with_timezone(&Utc);
-                    let end_utc = day_end_local.with_timezone(&Utc);
+                    let (start_utc, end_utc) = utils::period_to_datetime(offset, period, true)?;
 
                     let conn = utils::get_connection(&self.db_url()?).await?;
                     let records = waycore::get_records_for_date(&conn, start_utc, end_utc).await?;
 
-                    self.show_records(Local::now().naive_local(), &records);
+                    self.show_records(Local::now().naive_local(), &records, true, 0);
                 }
             },
             MainCommand::Record { command } => match command {
