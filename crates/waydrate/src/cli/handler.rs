@@ -5,7 +5,7 @@ use crate::cli::types::{Cli, DisplayCommand, MainCommand, RecordCommand, SetComm
 use crate::styles;
 use crate::utils::{self, get_config_dir, get_db_file};
 use anyhow::{Context, Result, anyhow};
-use chrono::{Duration, Local, Months};
+use chrono::{Duration, Local, Months, NaiveDateTime};
 use sea_orm::DatabaseConnection;
 use waydrate_core::{self as waycore, entity::config};
 
@@ -113,7 +113,12 @@ impl CommandHandler {
         Ok(buf)
     }
 
-    fn show_records(&self, records: &[waycore::entity::record::Model]) {
+    fn show_records(&self, for_day: NaiveDateTime, records: &[waycore::entity::record::Model]) {
+        eprintln!(
+            "{style}INFO:{style:#} showing logs for {}",
+            for_day.format("%m/%d/%Y %I:%M:%S %p"),
+            style = styles::bold_green()
+        );
         for (rel_id, rec) in records.iter().enumerate() {
             let mut buf = String::new();
             let date = rec.date_logged.with_timezone(&Local);
@@ -136,7 +141,7 @@ impl CommandHandler {
                 Some(LogsCommand::Daily) | None => {
                     let conn = utils::get_connection(&self.db_url()?).await?;
                     let records = waycore::get_daily_records(&conn).await?;
-                    self.show_records(&records);
+                    self.show_records(Local::now().naive_local(), &records);
                 }
                 Some(LogsCommand::External(args)) => {
                     if args.len() > 1 {
@@ -163,7 +168,7 @@ impl CommandHandler {
 
                     if offset != 0 {
                         eprintln!(
-                            "{style}WARNING:{style:#} r-id only works for the ongoing day",
+                            "{style}WARNING:{style:#} r-id only works for the ongoing day (use absolute ids instead)",
                             style = styles::bold_yellow()
                         )
                     }
@@ -214,7 +219,7 @@ impl CommandHandler {
                     let conn = utils::get_connection(&self.db_url()?).await?;
                     let records = waycore::get_records_for_date(&conn, start_utc, end_utc).await?;
 
-                    self.show_records(&records);
+                    self.show_records(Local::now().naive_local(), &records);
                 }
             },
             MainCommand::Record { command } => match command {
