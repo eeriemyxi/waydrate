@@ -110,9 +110,11 @@ pub(crate) fn period_to_datetime(
             day_start_local = day_start_local
                 .checked_sub_months(Months::new(offset))
                 .context("Couldn't convert date")?;
-            // day_end_local = day_end_local
-            //     .checked_sub_months(Months::new(offset))
-            //     .context("Couldn't convert date")?;
+            if should_offset_end {
+                day_end_local = day_end_local
+                    .checked_sub_months(Months::new(offset))
+                    .context("Couldn't convert date")?;
+            }
         }
         _ => unreachable!(),
     }
