@@ -1,6 +1,6 @@
 pub mod entity;
 pub mod error;
-use chrono::{Local, Utc};
+use chrono::{DateTime, Local, Utc};
 use entity::{config, record};
 use sea_orm::{
     ActiveModelBehavior, ActiveModelTrait,
@@ -85,6 +85,18 @@ pub async fn remove_record(conn: &DatabaseConnection, id: i32) -> Result<(), err
     Ok(())
 }
 
+pub async fn get_records_for_date(
+    conn: &DatabaseConnection, start_utc: DateTime<Utc>, end_utc: DateTime<Utc>
+) -> Result<Vec<record::Model>, error::WaydrateError> {
+    let records = record::Entity::find()
+        .filter(record::Column::DateLogged.between(start_utc, end_utc))
+        .order_by_asc(record::Column::DateLogged)
+        .all(conn)
+        .await?;
+
+    Ok(records)
+}
+
 pub async fn get_daily_records(
     conn: &DatabaseConnection,
 ) -> Result<Vec<record::Model>, error::WaydrateError> {
@@ -107,13 +119,7 @@ pub async fn get_daily_records(
     let start_utc = day_start_local.with_timezone(&Utc);
     let end_utc = day_end_local.with_timezone(&Utc);
 
-    let records = record::Entity::find()
-        .filter(record::Column::DateLogged.between(start_utc, end_utc))
-        .order_by_asc(record::Column::DateLogged)
-        .all(conn)
-        .await?;
-
-    Ok(records)
+    get_records_for_date(conn, start_utc, end_utc).await
 }
 
 pub async fn get_daily_total(
