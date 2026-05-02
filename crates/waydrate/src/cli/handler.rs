@@ -161,6 +161,13 @@ impl CommandHandler {
                     }
                     let offset = offset.parse::<i64>()?;
 
+                    if offset != 0 {
+                        eprintln!(
+                            "{style}WARNING:{style:#} r-id only works for the ongoing day",
+                            style = styles::bold_yellow()
+                        )
+                    }
+
                     use chrono::{Local, Utc};
 
                     let today_local = Local::now().date_naive();
