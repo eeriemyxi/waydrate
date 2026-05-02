@@ -80,17 +80,17 @@ pub(crate) fn period_to_datetime(
 
     let mut day_start_local = today_local
         .and_hms_opt(0, 0, 0)
-        .context("Invalid time parameters provided")?
+        .context("failed to set time to start of day (00:00:00)")?
         .and_local_timezone(Local)
         .latest()
-        .context("Invalid time parameters provided")?;
+        .context("ambiguous or non-existent local time at start of day")?;
 
     let mut day_end_local = today_local
         .and_hms_opt(23, 59, 59)
-        .context("Invalid time parameters provided")?
+        .context("failed to set time to end of day (23:59:59)")?
         .and_local_timezone(Local)
         .latest()
-        .context("Invalid time parameters provided")?;
+        .context("ambiguous or non-existent local time at end of day")?;
 
     match period {
         'd' => {
@@ -109,11 +109,14 @@ pub(crate) fn period_to_datetime(
             let offset = u32::try_from(offset)? * (if period == 'y' { 12 } else { 1 });
             day_start_local = day_start_local
                 .checked_sub_months(Months::new(offset))
-                .context("Couldn't convert date")?;
+                .context("date overflow: calculated period falls outside supported range")?;
             if should_offset_end {
                 day_end_local = day_end_local
                     .checked_sub_months(Months::new(offset))
-                    .context("Couldn't convert date")?;
+                    .context(format!(
+                        "failed to subtract {} months from start date",
+                        offset
+                    ))?;
             }
         }
         _ => unreachable!(),

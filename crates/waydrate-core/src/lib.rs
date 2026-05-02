@@ -86,7 +86,9 @@ pub async fn remove_record(conn: &DatabaseConnection, id: i32) -> Result<(), err
 }
 
 pub async fn get_records_for_date(
-    conn: &DatabaseConnection, start_utc: DateTime<Utc>, end_utc: DateTime<Utc>
+    conn: &DatabaseConnection,
+    start_utc: DateTime<Utc>,
+    end_utc: DateTime<Utc>,
 ) -> Result<Vec<record::Model>, error::WaydrateError> {
     let records = record::Entity::find()
         .filter(record::Column::DateLogged.between(start_utc, end_utc))
