@@ -5,9 +5,11 @@ use crate::cli::types::{Cli, DisplayCommand, MainCommand, RecordCommand, SetComm
 use crate::styles;
 use crate::utils::{self, get_config_dir, get_db_file};
 use anyhow::{Context, Result, anyhow};
-use chrono::Local;
+use chrono::{Duration, Local, Months};
 use sea_orm::DatabaseConnection;
 use waydrate_core::{self as waycore, entity::config};
+
+use super::types::LogsCommand;
 
 pub(crate) trait CommandProperties {
     fn needs_db(&self) -> bool;
@@ -16,10 +18,10 @@ pub(crate) trait CommandProperties {
 impl CommandProperties for MainCommand {
     fn needs_db(&self) -> bool {
         match self {
-            Self::Daily => true,
-            Self::Display { command: _, .. } => true,
-            Self::Record { command: _ } => true,
-            Self::Set { command: _ } => true,
+            Self::Logs { .. } => true,
+            Self::Display { .. } => true,
+            Self::Record { .. } => true,
+            Self::Set { .. } => true,
             Self::Status => true,
             Self::Setup => false,
         }
@@ -111,26 +113,103 @@ impl CommandHandler {
         Ok(buf)
     }
 
+    fn show_records(&self, records: &[waycore::entity::record::Model]) {
+        for (rel_id, rec) in records.iter().enumerate() {
+            let mut buf = String::new();
+            let date = rec.date_logged.with_timezone(&Local);
+            buf.push_str(&format!(
+                "┌ {} ({})\n",
+                date.format("%d/%m/%y - %I:%M %p"),
+                chrono_humanize::HumanTime::from(date)
+            ));
+            buf.push_str(&format!(
+                "└ 󰖌 {} ml | id: {} | r-id: {}\n",
+                rec.amount_ml, rec.id, rel_id
+            ));
+            println!("{}", &buf)
+        }
+    }
+
     pub async fn handle(&self) -> Result<()> {
         match &self.cli.command {
-            MainCommand::Daily => {
-                let conn = utils::get_connection(&self.db_url()?).await?;
-                let records = waycore::get_daily_records(&conn).await?;
-                for (rel_id, rec) in records.iter().enumerate() {
-                    let mut buf = String::new();
-                    let date = rec.date_logged.with_timezone(&Local);
-                    buf.push_str(&format!(
-                        "┌ {} ({})\n",
-                        date.format("%d/%m/%y - %I:%M %p"),
-                        chrono_humanize::HumanTime::from(date)
-                    ));
-                    buf.push_str(&format!(
-                        "└ 󰖌 {} ml | id: {} | r-id: {}\n",
-                        rec.amount_ml, rec.id, rel_id
-                    ));
-                    println!("{}", &buf)
+            MainCommand::Logs { command } => match command {
+                Some(LogsCommand::Daily) | None => {
+                    let conn = utils::get_connection(&self.db_url()?).await?;
+                    let records = waycore::get_daily_records(&conn).await?;
+                    self.show_records(&records);
                 }
-            }
+                Some(LogsCommand::External(args)) => {
+                    if args.len() > 1 {
+                        return Err(anyhow!("Too many args. Must be 1 at most.",));
+                    }
+
+                    let input = args.first().map_or("0d", |v| v).chars();
+                    let mut offset = String::new();
+                    let mut period = 'd';
+                    for c in input.clone() {
+                        if c.is_numeric() {
+                            offset.push(c);
+                        } else if matches!(c, 'd' | 'w' | 'm' | 'y') {
+                            period = c;
+                        } else {
+                            return Err(anyhow!(
+                                "Unexpected char {:?} in {:?}",
+                                &c,
+                                &input.as_str()
+                            ));
+                        }
+                    }
+                    let offset = offset.parse::<i64>()?;
+
+                    use chrono::{Local, Utc};
+
+                    let today_local = Local::now().date_naive();
+
+                    let mut day_start_local = today_local
+                        .and_hms_opt(0, 0, 0)
+                        .context("Invalid time parameters provided")?
+                        .and_local_timezone(Local)
+                        .latest()
+                        .context("Invalid time parameters provided")?;
+
+                    let mut day_end_local = today_local
+                        .and_hms_opt(23, 59, 59)
+                        .context("Invalid time parameters provided")?
+                        .and_local_timezone(Local)
+                        .latest()
+                        .context("Invalid time parameters provided")?;
+
+                    match period {
+                        'd' => {
+                            day_start_local -= Duration::days(offset);
+                            day_end_local -= Duration::days(offset);
+                        }
+                        'w' => {
+                            day_start_local -= Duration::weeks(offset);
+                            day_end_local -= Duration::weeks(offset);
+                        }
+                        period @ ('m' | 'y') => {
+                            let offset =
+                                u32::try_from(offset)? * (if period == 'y' { 12 } else { 1 });
+                            day_start_local = day_start_local
+                                .checked_sub_months(Months::new(offset))
+                                .context("Couldn't convert date")?;
+                            day_end_local = day_end_local
+                                .checked_sub_months(Months::new(offset))
+                                .context("Couldn't convert date")?;
+                        }
+                        _ => unreachable!(),
+                    }
+
+                    let start_utc = day_start_local.with_timezone(&Utc);
+                    let end_utc = day_end_local.with_timezone(&Utc);
+
+                    let conn = utils::get_connection(&self.db_url()?).await?;
+                    let records = waycore::get_records_for_date(&conn, start_utc, end_utc).await?;
+
+                    self.show_records(&records);
+                }
+            },
             MainCommand::Record { command } => match command {
                 RecordCommand::Cup { count } => {
                     let conn = utils::get_connection(&self.db_url()?).await?;

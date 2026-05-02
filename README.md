@@ -60,7 +60,12 @@ Mod+Ctrl+bracketLeft {spawn "waydrate" "record" "remove" "last";}
 ```
 
 ## Daily Logs
-With `waydrate daily`, you can see your progress for the day.
+With `waydrate logs daily`, you can see your progress for the day.
+
+## Arbitrary Day Logs
+`waydrate logs` also supports `number<d|w|y|m>` syntax. For example, to gets logs from two days ago or a week ago, use:
+- `2d`
+- `1w`.
 
 ## Removing Logs
 `waydrate record remove` supports two modes, relative IDs and absolute IDs. By
@@ -78,7 +83,7 @@ Please see `waydrate set --help`. Especially `waydrate set display-template --he
 Usage: waydrate [OPTIONS] <COMMAND>
 
 Commands:
-  daily    Daily intake log
+  logs     Get logs for a day. Supports `daily` and number<d|w|m|y> (e.g., 2d -> 2 days ago)
   setup    Setup Waydrate
   set      Configure things
   record   Record intakes

@@ -11,8 +11,11 @@ pub(crate) struct Cli {
 }
 #[derive(Subcommand)]
 pub(crate) enum MainCommand {
-    /// Daily intake log
-    Daily,
+    /// Get logs for a day. Supports `daily` and number<d|w|m|y> (e.g., 2d -> 2 days ago)
+    Logs {
+        #[command(subcommand)]
+        command: Option<LogsCommand>,
+    },
     /// Setup Waydrate
     Setup,
     /// Configure things
@@ -78,6 +81,15 @@ pub(crate) enum SetCommand {
     /// -  How many cups you should have today
     #[command(verbatim_doc_comment)]
     DisplayTemplate { template: String },
+}
+
+#[derive(Subcommand)]
+#[command(allow_external_subcommands = true)]
+pub(crate) enum LogsCommand {
+    /// Daily intake log
+    Daily,
+    #[command(external_subcommand)]
+    External(Vec<String>),
 }
 
 pub(crate) struct DisplayKeys {
