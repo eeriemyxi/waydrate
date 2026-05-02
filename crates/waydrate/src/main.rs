@@ -176,9 +176,11 @@ impl CommandHandler {
                 let records = waycore::get_daily_records(&conn).await?;
                 for (rel_id, rec) in records.iter().enumerate() {
                     let mut buf = String::new();
+                    let date = rec.date_logged.with_timezone(&Local);
                     buf.push_str(&format!(
-                        "┌ {}\n",
-                        rec.date_logged.with_timezone(&Local).format("%d/%m/%y - %I:%M %p")
+                        "┌ {} ({})\n",
+                        date.format("%d/%m/%y - %I:%M %p"),
+                        chrono_humanize::HumanTime::from(date)
                     ));
                     buf.push_str(&format!(
                         "└ 󰖌 {} ml | id: {} | r-id: {}\n",
