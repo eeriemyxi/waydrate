@@ -87,7 +87,7 @@ Please see `waydrate set --help`. Especially `waydrate set display-template --he
 Usage: waydrate [OPTIONS] <COMMAND>
 
 Commands:
-  logs     Get logs for a day. Supports `daily` and number<d|w|m|y> (e.g., 2d -> 2 days ago)
+  logs     See logs. Supports arbitrary number<d|w|m|y> (e.g., 2d -> 2 days ago), see --help for other options
   setup    Setup Waydrate
   set      Configure things
   record   Record intakes

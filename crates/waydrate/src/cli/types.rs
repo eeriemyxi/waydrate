@@ -11,7 +11,8 @@ pub(crate) struct Cli {
 }
 #[derive(Subcommand)]
 pub(crate) enum MainCommand {
-    /// See logs. Supports `daily` and number<d|w|m|y> (e.g., 2d -> 2 days ago)
+    /// See logs. Supports arbitrary number<d|w|m|y> (e.g., 2d -> 2 days ago),
+    /// see --help for other options
     Logs {
         #[command(subcommand)]
         command: Option<LogsCommand>,
