@@ -29,6 +29,8 @@ pub(crate) enum MainCommand {
     Status,
     /// Print the templated hydration status (-j for JSON output)
     Display {
+        #[arg(short, long)]
+        json: bool,
         #[command(subcommand)]
         command: Option<DisplayCommand>,
     },

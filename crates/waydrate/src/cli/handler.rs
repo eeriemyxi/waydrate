@@ -17,7 +17,7 @@ impl CommandProperties for MainCommand {
     fn needs_db(&self) -> bool {
         match self {
             Self::Daily => true,
-            Self::Display { command: _ } => true,
+            Self::Display { command: _, .. } => true,
             Self::Record { command: _ } => true,
             Self::Set { command: _ } => true,
             Self::Status => true,
@@ -99,6 +99,18 @@ impl CommandHandler {
             .replace("{max_cup}", &keys.max_cup.to_string()))
     }
 
+    async fn get_display_json_content(&self) -> Result<String> {
+        let keys = self.get_display_keys().await?;
+        let mut buf = String::new();
+        buf.push('{');
+        buf.push_str(&format!("\"cur_l\": {},", keys.cur_l));
+        buf.push_str(&format!("\"max_l\": {},", keys.max_l));
+        buf.push_str(&format!("\"cur_cup\": {},", keys.cur_cup));
+        buf.push_str(&format!("\"max_cup\": {}", keys.max_cup));
+        buf.push('}');
+        Ok(buf)
+    }
+
     pub async fn handle(&self) -> Result<()> {
         match &self.cli.command {
             MainCommand::Daily => {
@@ -165,28 +177,38 @@ impl CommandHandler {
                 println!("Cup Size: {} ml", config.cup_size);
                 println!("Display Template: {}", config.display_template);
             }
-            MainCommand::Display { command } => {
+            MainCommand::Display { command, json } => {
+                let show_content = async || -> Result<()> {
+                    use std::io::{self, Write};
+
+                    if *json {
+                        println!("{}", self.get_display_json_content().await?);
+                    } else {
+                        println!("{}", self.get_display_content().await?);
+                    }
+
+                    io::stdout().flush()?;
+
+                    Ok(())
+                };
                 let Some(command) = command else {
-                    println!("{}", self.get_display_content().await?);
+                    show_content().await?;
                     return Ok(());
                 };
                 match command {
                     DisplayCommand::Watch => {
                         use notify::Watcher;
-                        use std::io::{self, Write};
 
                         let (tx, rx) = std::sync::mpsc::channel();
                         let db_path = get_db_file()?;
+
                         let mut watcher =
                             notify::RecommendedWatcher::new(tx, notify::Config::default())?;
                         watcher.watch(&db_path, notify::RecursiveMode::NonRecursive)?;
 
-                        println!("{}", self.get_display_content().await?);
-                        io::stdout().flush()?;
-
+                        show_content().await?;
                         for _ in rx {
-                            println!("{}", self.get_display_content().await?);
-                            io::stdout().flush()?;
+                            show_content().await?;
                         }
                     }
                 }
