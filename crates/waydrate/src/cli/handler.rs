@@ -1,5 +1,6 @@
 use std::fs::create_dir;
 
+use crate::cli::types::DisplayKeys;
 use crate::cli::types::{Cli, DisplayCommand, MainCommand, RecordCommand, SetCommand};
 use crate::styles;
 use crate::utils::{self, get_config_dir, get_db_file};
@@ -64,27 +65,38 @@ impl CommandHandler {
             .context("config uvailable (bug)")
     }
 
-    async fn get_display_content(&self) -> Result<String> {
+    async fn get_display_keys(&self) -> Result<DisplayKeys> {
         let conn = utils::get_connection(&self.db_url()?).await?;
         let config = self.config(&conn).await?;
         let ml_today = waycore::get_daily_total(&conn).await?;
 
-        let cur_l = format!("{:.1}", (ml_today as f64) / 1000.0).to_string();
-        let max_l = format!("{:.1}", (config.daily_goal_ml as f64) / 1000.0);
+        let prec = 10.0;
+        let cur_l = (ml_today as f64 / 1000.0 * prec).round() / prec;
+        let max_l = (config.daily_goal_ml as f64 / 1000.0 * prec).round() / prec;
 
-        let cur_cup = (ml_today as f64 / config.cup_size as f64)
-            .round()
-            .to_string();
-        let max_cup = (config.daily_goal_ml as f64 / config.cup_size as f64)
-            .round()
-            .to_string();
+        let cur_cup = (ml_today as f64 / config.cup_size as f64).round();
+        let max_cup = (config.daily_goal_ml as f64 / config.cup_size as f64).round();
+
+        Ok(DisplayKeys {
+            cur_l,
+            max_l,
+            cur_cup,
+            max_cup,
+        })
+    }
+
+    async fn get_display_content(&self) -> Result<String> {
+        let conn = utils::get_connection(&self.db_url()?).await?;
+        let config = self.config(&conn).await?;
+
+        let keys = self.get_display_keys().await?;
 
         Ok(config
             .display_template
-            .replace("{cur_l}", &cur_l)
-            .replace("{max_l}", &max_l)
-            .replace("{cur_cup}", &cur_cup)
-            .replace("{max_cup}", &max_cup))
+            .replace("{cur_l}", &keys.cur_l.to_string())
+            .replace("{max_l}", &keys.max_l.to_string())
+            .replace("{cur_cup}", &keys.cur_cup.to_string())
+            .replace("{max_cup}", &keys.max_cup.to_string()))
     }
 
     pub async fn handle(&self) -> Result<()> {

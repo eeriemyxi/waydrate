@@ -77,3 +77,10 @@ pub(crate) enum SetCommand {
     #[command(verbatim_doc_comment)]
     DisplayTemplate { template: String },
 }
+
+pub(crate) struct DisplayKeys {
+    pub cur_l: f64,
+    pub max_l: f64,
+    pub cur_cup: f64,
+    pub max_cup: f64,
+}
