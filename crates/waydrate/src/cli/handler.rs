@@ -138,14 +138,23 @@ impl CommandHandler {
                 chrono_humanize::HumanTime::from(date)
             ));
             buf.push_str(&format!(
-                "{}└ 󰖌 {} ml | id: {} | r-id: {}\n",
+                "{}└ 󰖌 {} ml | id: {} | r-id: {}",
                 " ".repeat(indent_level),
                 rec.amount_ml,
                 rec.id,
                 rel_id
             ));
-            println!("{}", &buf)
+            if rel_id + 1 != records.len() {
+                buf.push('\n');
+            }
+            println!("{}", &buf);
         }
+        println!(
+            "{}{style}Total{style:#}: {cups} cup(s)",
+            " ".repeat(indent_level),
+            style = styles::bold_green(),
+            cups = records.len()
+        )
     }
 
     pub async fn handle(&self) -> Result<()> {
